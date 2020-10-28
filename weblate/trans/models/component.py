@@ -17,11 +17,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import fnmatch
 import os
 import re
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from contextlib import contextmanager
 from copy import copy
 from datetime import datetime
@@ -49,7 +48,6 @@ from redis_lock import Lock, NotAcquired
 from weblate.checks.flags import Flags
 from weblate.formats.models import FILE_FORMATS
 from weblate.lang.models import Language, get_english_lang
-from weblate.memory.tasks import import_memory
 from weblate.trans.defines import (
     COMPONENT_NAME_LENGTH,
     FILENAME_LENGTH,
@@ -710,7 +708,6 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
         super().__init__(*args, **kwargs)
         self._file_format = None
         self.stats = ComponentStats(self)
-        self.addons_cache = None
         self.needs_cleanup = False
         self.alerts_trigger = {}
         self.updated_sources = {}
@@ -765,7 +762,7 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
                 continue
 
             if addon.has_settings:
-                form = addon.get_add_form(self, data=configuration)
+                form = addon.get_add_form(None, self, data=configuration)
                 if not form.is_valid():
                     self.log_warning(
                         "could not enable addon %s, invalid settings", name
@@ -950,14 +947,36 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
                 Change.objects.create(
                     action=Change.ACTION_NEW_SOURCE, unit=source, user=self.acting_user
                 )
-                self.updated_sources[id_hash] = source
+                self.updated_sources[source.id] = source
 
             self._sources[id_hash] = source
             return source
 
     @property
     def filemask_re(self):
-        return re.compile(fnmatch.translate(self.filemask).replace(".*", "([^/]*)"))
+        # We used to rely on fnmask.translate here, but since Python 3.9
+        # it became super optimized beast producing regexp with possibly
+        # several groups making it hard to modify later for our needs.
+        result = []
+        raw = []
+
+        def append(text: Optional[str]):
+            if raw:
+                result.append(re.escape("".join(raw)))
+                raw.clear()
+            if text is not None:
+                result.append(text)
+
+        for char in self.filemask:
+            if char == ".":
+                append(r"\.")
+            elif char == "*":
+                append("([^/]*)")
+            else:
+                raw.append(char)
+        append(None)
+        regex = "".join(result)
+        return re.compile(f"^{regex}$")
 
     @cached_property
     def full_slug(self):
@@ -1149,6 +1168,8 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
 
         if self.vcs == "local":
             if not os.path.exists(os.path.join(self.full_path, ".git")):
+                if validate and not self.template:
+                    raise ValidationError({"template": _("File does not exist.")})
                 LocalRepository.from_files(
                     self.full_path,
                     {self.template: self.file_format_cls.get_new_file_content()},
@@ -1156,7 +1177,9 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
             return
 
         with self.repository.lock:
-            self.repository.configure_remote(self.repo, self.push, self.branch)
+            self.repository.configure_remote(
+                self.repo, self.push, self.branch, fast=not self.id
+            )
             self.repository.set_committer(self.committer_name, self.committer_email)
 
             if pull:
@@ -1172,10 +1195,9 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
 
     def uses_changed_files(self, changed):
         """Detect whether list of changed files matches configuration."""
-        if self.template and self.template in changed:
-            return True
-        if self.intermediate and self.intermediate in changed:
-            return True
+        for filename in [self.template, self.intermediate, self.new_base]:
+            if filename and filename in changed:
+                return True
         for path in changed:
             if self.filemask_re.match(path):
                 return True
@@ -1511,6 +1533,7 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
         """Update current branch to match remote (if possible)."""
         if method is None:
             method = self.merge_style
+        user = request.user if request else self.acting_user
         # run pre update hook
         vcs_pre_update.send(sender=self.__class__, component=self)
         for component in self.linked_childs:
@@ -1555,7 +1578,7 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
                         component=self,
                         action=action_failed,
                         target=error,
-                        user=request.user if request else self.acting_user,
+                        user=user,
                         details={"error": error, "status": status},
                     )
                     self.add_alert("MergeFailure", error=error)
@@ -1572,8 +1595,12 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
                 Change.objects.create(
                     component=self,
                     action=action,
-                    user=request.user if request else self.acting_user,
+                    user=user,
                 )
+
+                # The files have been updated and the signal receivers (addons)
+                # might need to access the template
+                self.drop_template_store_cache()
 
                 # Run post update hook, this should be done with repo lock held
                 # to avoid posssible race with another update
@@ -1871,8 +1898,6 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
         if was_change:
             self.update_variants()
             component_post_update.send(sender=self.__class__, component=self)
-            # Update translation memory
-            transaction.on_commit(lambda: import_memory.delay(self.project_id, self.id))
 
         self.log_info("updating completed")
         return was_change
@@ -1931,7 +1956,7 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
     def set_default_branch(self):
         """Set default VCS branch if empty."""
         if not self.branch and not self.is_repo_link:
-            self.branch = VCS_REGISTRY[self.vcs].default_branch
+            self.branch = VCS_REGISTRY[self.vcs].get_remote_branch(self.repo)
 
     def clean_repo_link(self):
         """Validate repository link."""
@@ -2294,7 +2319,9 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
         self.progress_step(0)
         # Configure git repo if there were changes
         if changed_git:
+            # Bring VCS repo in sync with current model
             self.sync_git_repo(skip_push=skip_push)
+
             # Push in case the push URL was changed
             self.push_if_needed()
 
@@ -2363,7 +2390,8 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
         if (
             self.project.access_control == self.project.ACCESS_PUBLIC
             and not self.license
-            and not getattr(settings, "LOGIN_REQUIRED_URLS", None)
+            and not settings.LOGIN_REQUIRED_URLS
+            and (settings.LICENSE_FILTER is None or settings.LICENSE_FILTER)
         ):
             self.add_alert("MissingLicense")
         else:
@@ -2520,6 +2548,10 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
     def drop_repository_cache(self):
         if "repository" in self.__dict__:
             del self.__dict__["repository"]
+
+    def drop_addons_cache(self):
+        if "addons_cache" in self.__dict__:
+            del self.__dict__["addons_cache"]
 
     def load_intermediate_store(self):
         """Load translate-toolkit store for intermediate."""
@@ -2692,3 +2724,13 @@ class Component(FastDeleteModelMixin, models.Model, URLMixin, PathMixin, CacheKe
         from weblate.trans.guide import GUIDELINES
 
         return [guide(self) for guide in GUIDELINES]
+
+    @cached_property
+    def addons_cache(self):
+        from weblate.addons.models import Addon
+
+        result = defaultdict(list)
+        for addon in Addon.objects.filter_component(self):
+            for installed in addon.event_set.all():
+                result[installed.event].append(addon)
+        return result

@@ -50,6 +50,11 @@ DATABASES = {
         "NAME": os.environ["POSTGRES_DATABASE"],
         # Database user.
         "USER": os.environ["POSTGRES_USER"],
+        # Name of role to alter to set parameters in PostgreSQL,
+        # use in case role name is different than user used for authentication.
+        "ALTER_ROLE": os.environ.get(
+            "POSTGRES_ALTER_ROLE", os.environ["POSTGRES_USER"]
+        ),
         # Database password.
         "PASSWORD": os.environ["POSTGRES_PASSWORD"],
         # Set to empty string for localhost.
@@ -207,6 +212,11 @@ GITHUB_TOKEN = os.environ.get("WEBLATE_GITHUB_TOKEN", None)
 GITLAB_USERNAME = os.environ.get("WEBLATE_GITLAB_USERNAME", None)
 GITLAB_TOKEN = os.environ.get("WEBLATE_GITLAB_TOKEN", None)
 
+# Pagure username and token for sending merge requests.
+# Please see the documentation for more details.
+PAGURE_USERNAME = os.environ.get("WEBLATE_PAGURE_USERNAME", None)
+PAGURE_TOKEN = os.environ.get("WEBLATE_PAGURE_TOKEN", None)
+
 # Authentication configuration
 AUTHENTICATION_BACKENDS = ()
 
@@ -240,7 +250,6 @@ SOCIAL_AUTH_FACEBOOK_KEY = os.environ.get("WEBLATE_SOCIAL_AUTH_FACEBOOK_KEY", ""
 SOCIAL_AUTH_FACEBOOK_SECRET = os.environ.get("WEBLATE_SOCIAL_AUTH_FACEBOOK_SECRET", "")
 SOCIAL_AUTH_FACEBOOK_SCOPE = ["email", "public_profile"]
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {"fields": "id,name,email"}
-SOCIAL_AUTH_FACEBOOK_API_VERSION = "3.1"
 
 if "WEBLATE_SOCIAL_AUTH_GOOGLE_OAUTH2_KEY" in os.environ:
     AUTHENTICATION_BACKENDS += ("social_core.backends.google.GoogleOAuth2",)
@@ -811,14 +820,15 @@ SECURE_REFERRER_POLICY = "same-origin"
 # SSL redirect URL exemption list
 SECURE_REDIRECT_EXEMPT = (r"healthz/$",)  # Allowing HTTP access to health check
 # Session cookie age (in seconds)
-SESSION_COOKIE_AGE = 1209600
+SESSION_COOKIE_AGE = 1000
+SESSION_COOKIE_AGE_AUTHENTICATED = 1209600
 # Increase allowed upload size
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50000000
 
 # Apply session coookie settings to language cookie as ewll
 LANGUAGE_COOKIE_SECURE = SESSION_COOKIE_SECURE
 LANGUAGE_COOKIE_HTTPONLY = SESSION_COOKIE_HTTPONLY
-LANGUAGE_COOKIE_AGE = SESSION_COOKIE_AGE * 10
+LANGUAGE_COOKIE_AGE = SESSION_COOKIE_AGE_AUTHENTICATED * 10
 
 # Some security headers
 SECURE_BROWSER_XSS_FILTER = True
@@ -860,6 +870,14 @@ EMAIL_SUBJECT_PREFIX = "[{0}] ".format(SITE_TITLE)
 
 # Enable remote hooks
 ENABLE_HOOKS = True
+
+# Version hiding
+HIDE_VERSION = get_env_bool("WEBLATE_HIDE_VERSION", False)
+
+# Licensing filter
+if "WEBLATE_LICENSE_FILTER" in os.environ:
+    LICENSE_FILTER = set(get_env_list("WEBLATE_LICENSE_FILTER"))
+    LICENSE_FILTER.discard("")
 
 # By default the length of a given translation is limited to the length of
 # the source string * 10 characters. Set this option to False to allow longer
@@ -1130,6 +1148,7 @@ CELERY_TASK_ROUTES = {
     "weblate.utils.tasks.database_backup": {"queue": "backup"},
     "weblate.wladmin.tasks.backup": {"queue": "backup"},
     "weblate.wladmin.tasks.backup_service": {"queue": "backup"},
+    "weblate.memory.tasks.*": {"queue": "memory"},
 }
 
 # Database backup type

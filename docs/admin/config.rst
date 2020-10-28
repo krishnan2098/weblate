@@ -579,6 +579,8 @@ Turn on/off the :guilabel:`Share` menu so users can share translation progress o
 GITLAB_CREDENTIALS
 ------------------
 
+.. versionadded:: 4.3
+
 List for credentials for GitLab servers.
 
 .. hint::
@@ -615,7 +617,9 @@ GitLab username used to send merge requests for translation updates.
 .. setting:: GITLAB_TOKEN
 
 GITLAB_TOKEN
----------------
+------------
+
+.. versionadded:: 4.3
 
 GitLab personal access token used to make API calls for translation updates.
 
@@ -629,6 +633,8 @@ GitLab personal access token used to make API calls for translation updates.
 
 GITHUB_CREDENTIALS
 ------------------
+
+.. versionadded:: 4.3
 
 List for credentials for GitHub servers.
 
@@ -665,7 +671,9 @@ GitHub username used to send pull requests for translation updates.
 .. setting:: GITHUB_TOKEN
 
 GITHUB_TOKEN
----------------
+------------
+
+.. versionadded:: 4.3
 
 GitHub personal access token used to make API calls to send pull requests for
 translation updates.
@@ -699,6 +707,24 @@ error messages too in a similar manner.
 .. note::
 
     This is turned on by default.
+
+.. setting:: HIDE_VERSION
+
+HIDE_VERSION
+------------
+
+.. versionadded:: 4.3.1
+
+Hides version information from unauthenticated users. This also makes all
+documentation links point to latest version instead of the documentation
+matching currently installed version.
+
+Hiding version is recommended security practice in some corporations, but it
+doesn't prevent attacker to figure out version by probing the behavior.
+
+.. note::
+
+    This is turned off by default.
 
 .. setting:: IP_BEHIND_REVERSE_PROXY
 
@@ -825,7 +851,12 @@ For example:
 LICENSE_FILTER
 --------------
 
-Optional addition of licenses to show.
+.. versionchanged:: 4.3
+
+    Setting this to blank value now disables license alert.
+
+Filter list of licenses to show. This also disables the license alert when set
+to empty.
 
 .. note::
 
@@ -836,6 +867,16 @@ For example:
 .. code-block:: python
 
     LICENSE_FILTER = {"AGPL-3.0", "GPL-3.0-or-later"}
+
+Following disables the license alert:
+
+.. code-block:: python
+
+    LICENSE_FILTER = set()
+
+.. seealso::
+
+    :ref:`alerts`
 
 .. setting:: LICENSE_REQUIRED
 
@@ -1383,6 +1424,63 @@ NEARBY_MESSAGES
 ---------------
 
 How many strings to show around the currently translated string. This is just a default value, users can adjust this in :ref:`user-profile`.
+
+.. setting:: PAGURE_CREDENTIALS
+
+PAGURE_CREDENTIALS
+------------------
+
+.. versionadded:: 4.3.2
+
+List for credentials for Pagure servers.
+
+.. hint::
+
+    Use this in case you want Weblate to interact with more of them, for single
+    Pagure endpoint stick with :setting:`PAGURE_USERNAME` and :setting:`PAGURE_TOKEN`.
+
+.. code-block:: python
+
+    PAGURE_CREDENTIALS = {
+        "pagure.io": {
+            "username": "weblate",
+            "token": "your-api-token",
+        },
+        "pagure.example.com": {
+            "username": "weblate",
+            "token": "another-api-token",
+        },
+    }
+
+.. setting:: PAGURE_USERNAME
+
+PAGURE_USERNAME
+---------------
+
+.. versionadded:: 4.3.2
+
+Pagure username used to send merge requests for translation updates.
+
+.. seealso::
+
+   :setting:`PAGURE_CREDENTIALS`,
+   :ref:`vcs-pagure`
+
+.. setting:: PAGURE_TOKEN
+
+PAGURE_TOKEN
+------------
+
+.. versionadded:: 4.3.2
+
+Pagure personal access token used to make API calls for translation updates.
+
+.. seealso::
+
+   :setting:`PAGURE_CREDENTIALS`,
+   :ref:`vcs-pagure`,
+   `Pagure API <https://pagure.io/api/0/>`_
+
 
 .. setting:: RATELIMIT_ATTEMPTS
 

@@ -91,7 +91,7 @@ class BaseAddon:
             if cls.repo_scope and component.linked_component:
                 component = component.linked_component
             # Clear addon cache
-            component.addons_cache = None
+            component.drop_addons_cache()
         return Addon(
             component=component,
             name=cls.name,
@@ -109,23 +109,23 @@ class BaseAddon:
         return result
 
     @classmethod
-    def get_add_form(cls, component, **kwargs):
+    def get_add_form(cls, user, component, **kwargs):
         """Return configuration form for adding new addon."""
         if cls.settings_form is None:
             return None
         storage = cls.create_object(component)
         instance = cls(storage)
         # pylint: disable=not-callable
-        return cls.settings_form(instance, **kwargs)
+        return cls.settings_form(user, instance, **kwargs)
 
-    def get_settings_form(self, **kwargs):
+    def get_settings_form(self, user, **kwargs):
         """Return configuration for for this addon."""
         if self.settings_form is None:
             return None
         if "data" not in kwargs:
             kwargs["data"] = self.instance.configuration
         # pylint: disable=not-callable
-        return self.settings_form(self, **kwargs)
+        return self.settings_form(user, self, **kwargs)
 
     def configure(self, settings):
         """Save configuration."""
@@ -153,6 +153,7 @@ class BaseAddon:
                 self.post_commit(component)
         if EVENT_POST_UPDATE in self.events:
             for component in components:
+                component.commit_pending("addon", None)
                 self.post_update(component, "")
         if EVENT_COMPONENT_UPDATE in self.events:
             for component in components:
@@ -329,7 +330,6 @@ class UpdateBaseAddon(BaseAddon):
         raise NotImplementedError()
 
     def post_update(self, component, previous_head):
-        component.commit_pending("addon", None, skip_push=True)
         try:
             self.update_translations(component, previous_head)
         except FileParseError:

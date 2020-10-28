@@ -1,7 +1,36 @@
+Weblate 4.3.2
+-------------
+
+Not yet released.
+
+* Fixed crash on certain component filemasks.
+* Improved accurancy of the consecutive duplicated words check.
+* Added support for Pagure pull requests.
+* Improved error messages on failed registraiton.
+* Reverted rendering developer comments as markdown.
+* Simplified setup of Git repositories with different default branch than master.
+* Newly created internal repositories now use main as default branch.
+* Reduced false positives rate of unchanged translation while translating reStructuredText.
+* Fixed CodeMirror display issues is some situations.
+
+Weblate 4.3.1
+-------------
+
+Released on October 21st 2020.
+
+* Improved automatic translation performance.
+* Fixed session expiry for authenticated users.
+* Add support for hiding version information.
+* Improve hooks compatibility with Bitbucket Server.
+* Improved translation memory updates performance.
+* Reduced memory usage.
+* Improved performance of matrix view.
+* Added confirmation before removing user from a project.
+
 Weblate 4.3
 -----------
 
-Not yet released.
+Released on October 15th 2020.
 
 * Include user stats in the API.
 * Fixed component ordering on paginated pages.
@@ -29,6 +58,8 @@ Not yet released.
 * Improved repository management view.
 * Automatically enable java-format for Android.
 * Added support for localized screenshots.
+* Added support for Python 3.9.
+* Fixed translating HTML files under certain conditions.
 
 Weblate 4.2.2
 -------------

@@ -471,6 +471,8 @@ Generic settings
 
 .. envvar:: WEBLATE_GITHUB_TOKEN
 
+    .. versionadded:: 4.3
+
     Configures GitHub personal access token for GitHub pull-requests via API by changing
     :setting:`GITHUB_TOKEN`.
 
@@ -496,13 +498,23 @@ Generic settings
 
        :ref:`vcs-gitlab`
 
-.. envvar:: WEBLATE_GITLAB_HOST
+.. envvar:: WEBLATE_PAGURE_USERNAME
 
-    Configures GitLab Host for GitLab merge-requests
+    Configures Pagure username for Pagure merge-requests by changing
+    :setting:`PAGURE_USERNAME`
 
     .. seealso::
 
-       :ref:`vcs-gitlab`
+       :ref:`vcs-pagure`
+
+.. envvar:: WEBLATE_PAGURE_TOKEN
+
+    Configures Pagure personal access token for Pagure merge-requests via API by changing
+    :setting:`PAGURE_TOKEN`
+
+    .. seealso::
+
+       :ref:`vcs-pagure`
 
 .. envvar:: WEBLATE_SIMPLIFY_LANGUAGES
 
@@ -565,6 +577,14 @@ Generic settings
         :setting:`CSP_CONNECT_SRC`,
         :setting:`CSP_STYLE_SRC`,
         :setting:`CSP_FONT_SRC`
+
+.. envvar:: WEBLATE_LICENSE_FILTER
+
+    Configures :setting:`LICENSE_FILTER`.
+
+.. envvar:: WEBLATE_HIDE_VERSION
+
+    Configures :setting:`HIDE_VERSION`.
 
 Machine translation settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -887,6 +907,10 @@ both Weblate and PostgreSQL containers.
    Configure how PostgreSQL handles SSL in connection to the server, for possible choices see
    `SSL Mode Descriptions <https://www.postgresql.org/docs/11/libpq-ssl.html#LIBPQ-SSL-SSLMODE-STATEMENTS>`_
 
+.. envvar:: POSTGRES_ALTER_ROLE
+
+    Configures name of role to alter during migrations, see :ref:`config-postgresql`.
+
 
 Database backup settings
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1121,6 +1145,7 @@ Container settings
 
 .. envvar:: CELERY_MAIN_OPTIONS
 .. envvar:: CELERY_NOTIFY_OPTIONS
+.. envvar:: CELERY_MEMORY_OPTIONS
 .. envvar:: CELERY_TRANSLATE_OPTIONS
 .. envvar:: CELERY_BACKUP_OPTIONS
 .. envvar:: CELERY_BEAT_OPTIONS

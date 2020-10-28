@@ -599,9 +599,8 @@ Android string resources
 
 Android specific file format for translating applications.
 
-Android string resources are monolingual, the
-:guilabel:`Monolingual base language file` file is stored in a different
-location from the others :file:`res/values/strings.xml`.
+Android string resources are monolingual, the :ref:`component-template` file is
+stored in a different location from the others :file:`res/values/strings.xml`.
 
 +-------------------------------------------------------------------+
 | Typical Weblate :ref:`component`                                  |
@@ -1356,30 +1355,30 @@ When you specify :ref:`component-new_base` in :ref:`component`, Weblate will
 use this file to start new translations. Any exiting translations will be
 removed from the file when doing so.
 
-When :guilabel:`Template for new translations` is empty and the file format
+When :ref:`component-new_base` is empty and the file format
 supports it, an empty file is created where new strings will be added once they are
 translated.
 
-The :guilabel:`Language code style` allows you to customize language code used
+The :ref:`component-language_code_style` allows you to customize language code used
 in generated filenames:
 
 Default based on the file format
    Dependent on file format, for most of them POSIX is used.
 POSIX style using underscore as a separator
    Typically used by gettext and related tools, produces language codes like
-   `pt_BR`.
+   ``pt_BR``.
 POSIX style using underscore as a separator, including country code
    POSIX style language code including the country code even when not necessary
-   (for example 'cs_CZ').
+   (for example ``cs_CZ``).
 BCP style using hyphen as a separator
    Typically used on web platforms, produces language codes like
-   `pt-BR`.
+   ``pt-BR``.
 BCP style using hyphen as a separator, including country code
    BCP style language code including the country code even when not necessary
-   (for example 'cs-CZ').
+   (for example ``cs-CZ``).
 Android style
    Only used in Android apps, produces language codes like
-   `pt-rBR`.
+   ``pt-rBR``.
 Java style
    Used by Java—mostly BCP with legacy codes for Chinese.
 

@@ -37,7 +37,7 @@ jobs:
       - name: Install apt dependencies
         run: sudo ./ci/apt-install
       - name: Set up Python 3.7
-        uses: actions/setup-python@v2.1.3
+        uses: actions/setup-python@v2.1.4
         with:
           python-version: 3.7
       - name: Install pip dependencies
@@ -54,6 +54,8 @@ jobs:
         run: ./ci/run-migrate 4.1
       - name: Migrate from 4.2
         run: ./ci/run-migrate 4.2
+      - name: Migrate from 4.3
+        run: ./ci/run-migrate 4.3
       - name: Coverage
         run: |
           coverage combine

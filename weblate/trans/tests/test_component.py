@@ -237,6 +237,10 @@ class ComponentTest(RepoTestCase):
             translation.unit_set.get(context="thanks").source,
             "Thank you for using Weblate.",
         )
+        # Verify source units
+        unit = component.source_translation.unit_set.get(context="hello")
+        self.assertEqual(unit.source, "Hello world!\n")
+        self.assertEqual(unit.target, "Hello, world!\n")
 
     def test_switch_json_intermediate(self):
         component = self._create_component(
@@ -780,6 +784,14 @@ class ComponentValidationTest(RepoTestCase):
         self.assertEqual(
             component.get_lang_code("path/el/resources/MessagesBundle_el.properties"),
             "el",
+        )
+
+    def test_lang_code_plus(self):
+        component = Component(project=Project())
+        component.filemask = "po/*/master/pages/C_and_C++.po"
+        self.assertEqual(
+            component.get_lang_code("po/cs/master/pages/C_and_C++.po"),
+            "cs",
         )
 
 

@@ -149,7 +149,7 @@
 {% for alert in alerts %}
 <div class="panel panel-default">
 <div class="panel-heading">{{ alert }}</div>
-<div class="panel-body">{{ alert.render }}</div>
+<div class="panel-body">{% render_alert alert %}</div>
 <form action="{% url "dismiss-alert" project=object.project.slug component=object.slug %}" method="post">
 <div class="panel-footer">
   {% comment %}Translators: Component alert footer, first and last contain localized human readable time span, for example 5 days ago{% endcomment %}
@@ -174,7 +174,7 @@
 
 <table class="table table-striped table-autowidth">
 {% include "component_info.html" %}
-{% include "project_stats.html" with stats=object.stats %}
+{% include "snippets/stats.html" with stats=object.stats %}
 </table>
 
 </div>

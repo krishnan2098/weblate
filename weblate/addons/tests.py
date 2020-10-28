@@ -81,7 +81,7 @@ class AddonBaseTest(FixtureTestCase):
         self.assertEqual(self.component.addon_set.count(), 1)
 
     def test_add_form(self):
-        form = TestAddon.get_add_form(self.component, data={})
+        form = TestAddon.get_add_form(None, self.component, data={})
         self.assertTrue(form.is_valid())
         form.save()
         self.assertEqual(self.component.addon_set.count(), 1)
@@ -517,7 +517,7 @@ class PropertiesAddonTest(ViewTestCase):
 class CommandTest(ViewTestCase):
     """Test for management commands."""
 
-    def test_list_languages(self):
+    def test_list_addons(self):
         output = StringIO()
         call_command("list_addons", stdout=output)
         self.assertIn("msgmerge", output.getvalue())

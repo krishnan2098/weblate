@@ -121,13 +121,6 @@ class TranslationUnit:
             return calculate_hash(self.source, self.context)
         return calculate_hash(self.context)
 
-    @cached_property
-    def content_hash(self):
-        """Return hash of source string and context, used for quick lookup."""
-        if self.template is None:
-            return self.id_hash
-        return calculate_hash(self.source, self.context)
-
     def is_translated(self):
         """Check whether unit is translated."""
         return bool(self.target)
@@ -201,7 +194,7 @@ class TranslationFormat:
         self.storefile = storefile
 
         # Load store
-        self.store = self.load(storefile)
+        self.store = self.load(storefile, template_store)
 
         # Remember template
         self.template_store = template_store
@@ -227,7 +220,7 @@ class TranslationFormat:
         return [self.storefile.name]
 
     @classmethod
-    def load(cls, storefile):
+    def load(cls, storefile, template_store):
         raise NotImplementedError()
 
     def get_plural(self, language):
@@ -470,7 +463,7 @@ class TranslationFormat:
 
     @classmethod
     def add_breadcrumb(cls, message, **data):
-        if getattr(settings, "SENTRY_DSN", None):
+        if settings.SENTRY_DSN:
             add_breadcrumb(category="storage", message=message, data=data, level="info")
 
     def delete_unit(self, ttkit_unit) -> Optional[str]:
@@ -516,7 +509,7 @@ class EmptyFormat(TranslationFormat):
     """For testing purposes."""
 
     @classmethod
-    def load(cls, storefile):
+    def load(cls, storefile, template_store):
         return type(str(""), (object,), {"units": []})()
 
     def save(self):

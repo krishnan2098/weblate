@@ -42,6 +42,9 @@ DATABASES = {
         "NAME": "weblate",
         # Database user.
         "USER": "weblate",
+        # Name of role to alter to set parameters in PostgreSQL,
+        # use in case role name is different than user used for authentication.
+        # "ALTER_ROLE": "weblate",
         # Database password.
         "PASSWORD": "",
         # Set to empty string for localhost.
@@ -201,10 +204,12 @@ TEMPLATES = [
 # GitHub username for sending pull requests.
 # Please see the documentation for more details.
 GITHUB_USERNAME = None
+GITHUB_TOKEN = None
 
 # GitLab username for sending merge requests.
 # Please see the documentation for more details.
 GITLAB_USERNAME = None
+GITLAB_TOKEN = None
 
 # Authentication configuration
 AUTHENTICATION_BACKENDS = (
@@ -235,7 +240,6 @@ SOCIAL_AUTH_FACEBOOK_KEY = ""
 SOCIAL_AUTH_FACEBOOK_SECRET = ""
 SOCIAL_AUTH_FACEBOOK_SCOPE = ["email", "public_profile"]
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {"fields": "id,name,email"}
-SOCIAL_AUTH_FACEBOOK_API_VERSION = "3.1"
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = ""
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = ""
@@ -483,6 +487,8 @@ LOGGING = {
         "social": {"handlers": [DEFAULT_LOG], "level": DEFAULT_LOGLEVEL},
         # Django Authentication Using LDAP
         "django_auth_ldap": {"handlers": [DEFAULT_LOG], "level": DEFAULT_LOGLEVEL},
+        # SAML IdP
+        "djangosaml2idp": {"handlers": [DEFAULT_LOG], "level": DEFAULT_LOGLEVEL},
     },
 }
 
@@ -599,7 +605,7 @@ SECURE_REFERRER_POLICY = "same-origin"
 # SSL redirect URL exemption list
 SECURE_REDIRECT_EXEMPT = (r"healthz/$",)  # Allowing HTTP access to health check
 # Session cookie age (in seconds)
-SESSION_COOKIE_AGE = 2200
+SESSION_COOKIE_AGE = 1000
 SESSION_COOKIE_AGE_AUTHENTICATED = 1209600
 # Increase allowed upload size
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50000000
@@ -607,7 +613,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 50000000
 # Apply session coookie settings to language cookie as ewll
 LANGUAGE_COOKIE_SECURE = SESSION_COOKIE_SECURE
 LANGUAGE_COOKIE_HTTPONLY = SESSION_COOKIE_HTTPONLY
-LANGUAGE_COOKIE_AGE = SESSION_COOKIE_AGE * 10
+LANGUAGE_COOKIE_AGE = SESSION_COOKIE_AGE_AUTHENTICATED * 10
 
 # Some security headers
 SECURE_BROWSER_XSS_FILTER = True
@@ -762,7 +768,7 @@ SERVER_EMAIL = "noreply@example.com"
 DEFAULT_FROM_EMAIL = "noreply@example.com"
 
 # List of URLs your site is supposed to serve
-ALLOWED_HOSTS = [SITE_DOMAIN]
+ALLOWED_HOSTS = ["*"]
 
 # Configuration for caching
 CACHES = {
@@ -875,6 +881,7 @@ CELERY_TASK_ROUTES = {
     "weblate.utils.tasks.database_backup": {"queue": "backup"},
     "weblate.wladmin.tasks.backup": {"queue": "backup"},
     "weblate.wladmin.tasks.backup_service": {"queue": "backup"},
+    "weblate.memory.tasks.*": {"queue": "memory"},
 }
 
 # Enable plain database backups

@@ -95,6 +95,10 @@ class Repository:
                 self.init()
 
     @classmethod
+    def get_remote_branch(cls, repo: str):
+        return cls.default_branch
+
+    @classmethod
     def add_breadcrumb(cls, message, **data):
         # Add breadcrumb only if settings are already loaded,
         # we do not want to force loading settings early
@@ -179,7 +183,6 @@ class Repository:
             stderr=process.stderr,
             cwd=cwd,
         )
-        cls.log("exec {0} [retcode={1}]".format(text_cmd, process.returncode))
         if process.returncode:
             raise RepositoryException(
                 process.returncode, process.stdout + (process.stderr or "")
@@ -239,12 +242,12 @@ class Repository:
         )
 
     @classmethod
-    def _clone(cls, source, target, branch=None):
+    def _clone(cls, source: str, target: str, branch: str):
         """Clone repository."""
         raise NotImplementedError()
 
     @classmethod
-    def clone(cls, source, target, branch=None, component=None):
+    def clone(cls, source: str, target: str, branch: str, component=None):
         """Clone repository and return object for cloned repository."""
         SSH_WRAPPER.create()
         cls._clone(source, target, branch)
@@ -414,7 +417,9 @@ class Repository:
 
         return objhash.hexdigest()
 
-    def configure_remote(self, pull_url, push_url, branch):
+    def configure_remote(
+        self, pull_url: str, push_url: str, branch: str, fast: bool = True
+    ):
         """Configure remote repository."""
         raise NotImplementedError()
 

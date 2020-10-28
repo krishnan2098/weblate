@@ -234,7 +234,7 @@ class TTKitFormat(TranslationFormat):
         return
 
     @classmethod
-    def load(cls, storefile):
+    def load(cls, storefile, template_store):
         """Load file using defined loader."""
         # Add missing mode attribute to Django file wrapper
         if isinstance(storefile, TranslationStore):
@@ -899,9 +899,12 @@ class BasePoFormat(TTKitFormat, BilingualUpdateMixin):
             # PO file header is missing ASCII encoding is assumed)
             if "warning:" in result.stderr:
                 raise UpdateError(" ".join(cmd), result.stderr)
-        except (OSError, subprocess.CalledProcessError) as error:
+        except OSError as error:
             report_error(cause="Failed msgmerge")
-            raise UpdateError(" ".join(cmd), getattr(error, "output", str(error)))
+            raise UpdateError(" ".join(cmd), error)
+        except subprocess.CalledProcessError as error:
+            report_error(cause="Failed msgmerge")
+            raise UpdateError(" ".join(cmd), error.output + error.stderr)
 
 
 class PoFormat(BasePoFormat):
@@ -1411,8 +1414,8 @@ class INIFormat(TTKitFormat):
         return "ini"
 
     @classmethod
-    def load(cls, storefile):
-        store = super().load(storefile)
+    def load(cls, storefile, template_store):
+        store = super().load(storefile, template_store)
         # Adjust store to have translations
         for unit in store.units:
             unit.target = unit.source

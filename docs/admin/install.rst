@@ -351,6 +351,8 @@ It is usually a good idea to run Weblate in a separate database, and separate us
 
         CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA weblate;
 
+.. _config-postgresql:
+
 Configuring Weblate to use PostgreSQL
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -359,21 +361,29 @@ The :file:`settings.py` snippet for PostgreSQL:
 .. code-block:: python
 
     DATABASES = {
-        'default': {
+        "default": {
             # Database engine
-            'ENGINE': 'django.db.backends.postgresql',
+            "ENGINE": "django.db.backends.postgresql",
             # Database name
-            'NAME': 'weblate',
+            "NAME": "weblate",
             # Database user
-            'USER': 'weblate',
+            "USER": "weblate",
+            # Name of role to alter to set parameters in PostgreSQL,
+            # use in case role name is different than user used for authentication.
+            # "ALTER_ROLE": "weblate",
             # Database password
-            'PASSWORD': 'password',
+            "PASSWORD": "password",
             # Set to empty string for localhost
-            'HOST': 'database.example.com',
+            "HOST": "database.example.com",
             # Set to empty string for default
-            'PORT': '',
+            "PORT": "",
         }
     }
+
+The migration code assumes that the role name matches username used while
+authenticating, in case it is not, please setting ``ALTER_ROLE``. Otherwise you
+get PostgreSQL error about not existing role during the database migration
+(``psycopg2.errors.UndefinedObject: role "weblate@hostname" does not exist``).
 
 MySQL and MariaDB
 +++++++++++++++++

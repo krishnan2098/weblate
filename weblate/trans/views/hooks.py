@@ -252,7 +252,7 @@ def bitbucket_extract_changes(data):
         return data["push"]["changes"]
     if "commits" in data:
         return data["commits"]
-    return {}
+    return []
 
 
 def bitbucket_extract_branch(data):
@@ -287,7 +287,7 @@ def bitbucket_extract_full_name(repository):
 
 def bitbucket_extract_repo_url(data, repository):
     if "links" in repository:
-        if "html" in data["repository"]["links"]:
+        if "html" in repository["links"]:
             return repository["links"]["html"]["href"]
         return repository["links"]["self"][0]["href"]
     if "canon_url" in data:
@@ -303,10 +303,15 @@ def bitbucket_hook_helper(data, request):
         "repo:push",
         "repo:refs_changed",
         "pullrequest:fulfilled",
+        "pr:merged",
     ):
         return None
 
-    repository = data["repository"]
+    if "pullRequest" in data:
+        # The pr:merged event
+        repository = data["pullRequest"]["fromRef"]["repository"]
+    else:
+        repository = data["repository"]
     full_name = bitbucket_extract_full_name(repository)
     repo_url = bitbucket_extract_repo_url(data, repository)
 

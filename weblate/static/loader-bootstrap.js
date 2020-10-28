@@ -24,7 +24,7 @@ function decreaseLoading(sel) {
   }
 }
 
-function addAlert(message, kind = "danger") {
+function addAlert(message, kind = "danger", delay = 3000) {
   var alerts = $("#popup-alerts");
   var e = $(
     '<div class="alert alert-' +
@@ -40,9 +40,11 @@ function addAlert(message, kind = "danger") {
       alerts.hide();
     }
   });
-  e.delay(3000).slideUp(200, function () {
-    $(this).alert("close");
-  });
+  if (delay) {
+    e.delay(delay).slideUp(200, function () {
+      $(this).alert("close");
+    });
+  }
 }
 
 jQuery.fn.extend({
@@ -779,7 +781,7 @@ $(function () {
     var $form = $slug.closest("form");
     $form
       .find('input[name="name"]')
-      .on("change keypress keydown paste", function () {
+      .on("change keypress keydown keyup paste", function () {
         $slug.val(
           slugify($(this).val(), { remove: /[^\w\s-]+/g }).toLowerCase()
         );
@@ -1006,6 +1008,17 @@ $(function () {
         target.val(name.substring(0, name.lastIndexOf(".")));
         target.change();
       }
+    }
+  );
+
+  /* Alert when creating a component */
+  $("#form-create-component-branch,#form-create-component-vcs").submit(
+    function () {
+      addAlert(
+        gettext("Weblate is now scanning the repository, please be patient."),
+        (kind = "info"),
+        (delay = 0)
+      );
     }
   );
 

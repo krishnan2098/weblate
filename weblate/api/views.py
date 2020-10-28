@@ -118,21 +118,23 @@ description of the API.</p>
 """
 
 
-def get_view_description(view_cls, html=False):
+def get_view_description(view, html=False):
     """Given a view class, return a textual description to represent the view.
 
     This name is used in the browsable API, and in OPTIONS responses. This function is
     the default for the `VIEW_DESCRIPTION_FUNCTION` setting.
     """
-    description = view_cls.__doc__ or ""
+    description = view.__doc__ or ""
     description = formatting.dedent(smart_str(description))
 
-    if hasattr(getattr(view_cls, "serializer_class", "None"), "Meta"):
+    if hasattr(getattr(view, "serializer_class", "None"), "Meta"):
         doc_url = get_doc_url(
-            "api", "{0}s".format(view_cls.serializer_class.Meta.model.__name__.lower())
+            "api",
+            "{0}s".format(view.serializer_class.Meta.model.__name__.lower()),
+            user=view.request.user,
         )
     else:
-        doc_url = get_doc_url("api")
+        doc_url = get_doc_url("api", user=view.request.user)
 
     if html:
         return formatting.markup_description(description) + mark_safe(
@@ -1144,7 +1146,9 @@ class TranslationViewSet(MultipleFieldMixin, WeblateViewSet, DestroyModelMixin):
             serializer = self.serializer_class(obj, context={"request": request})
             return Response(serializer.data, status=HTTP_200_OK)
 
-        queryset = obj.unit_set.search(request.GET.get("q", "")).order_by("id")
+        queryset = (
+            obj.unit_set.search(request.GET.get("q", "")).order_by("id").prefetch()
+        )
         page = self.paginate_queryset(queryset)
 
         serializer = UnitSerializer(page, many=True, context={"request": request})
@@ -1525,7 +1529,7 @@ class Metrics(APIView):
                 "units": stats.all,
                 "units_translated": stats.translated,
                 "users": User.objects.count(),
-                "changes": Change.objects.count(),
+                "changes": stats.total_changes,
                 "projects": Project.objects.count(),
                 "components": Component.objects.count(),
                 "translations": Translation.objects.count(),

@@ -22,10 +22,11 @@ from glob import glob
 from time import time
 from typing import List, Optional
 
+from celery import current_task
 from celery.schedules import crontab
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F
+from django.db.models import Count, F
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext, override
@@ -43,7 +44,6 @@ from weblate.trans.models import (
     Project,
     Suggestion,
     Translation,
-    Unit,
 )
 from weblate.utils.celery import app
 from weblate.utils.data import data_dir
@@ -55,12 +55,13 @@ from weblate.vcs.base import RepositoryException
 @app.task(
     trail=False, autoretry_for=(Timeout,), retry_backoff=600, retry_backoff_max=3600
 )
-def perform_update(cls, pk, auto=False):
+def perform_update(cls, pk, auto=False, obj=None):
     try:
-        if cls == "Project":
-            obj = Project.objects.get(pk=pk)
-        else:
-            obj = Component.objects.get(pk=pk)
+        if obj is None:
+            if cls == "Project":
+                obj = Project.objects.get(pk=pk)
+            else:
+                obj = Component.objects.get(pk=pk)
         if settings.AUTO_UPDATE in ("full", True) or not auto:
             obj.do_update()
         else:
@@ -135,17 +136,15 @@ def commit_pending(hours=None, pks=None, logger=None):
 def cleanup_sources(project):
     """Remove stale source Unit objects."""
     for component in project.component_set.filter(template="").iterator():
+        translation = component.source_translation
+        # Skip translations with a filename (eg. when POT file is present)
+        if translation.filename:
+            continue
         with transaction.atomic():
-            translation = component.source_translation
-
-            source_ids = (
-                Unit.objects.filter(translation__component=component)
-                .exclude(translation=translation)
-                .values_list("id_hash", flat=True)
-                .distinct()
-            )
-
-            translation.unit_set.exclude(id_hash__in=source_ids).delete()
+            # Remove all units where there is just one referenced unit (self)
+            translation.unit_set.annotate(Count("unit")).filter(
+                unit__count__lte=1
+            ).delete()
 
 
 @app.task(trail=False)
@@ -192,13 +191,11 @@ def cleanup_suggestions():
 @app.task(trail=False)
 def update_remotes():
     """Update all remote branches (without attempt to merge)."""
-    non_linked = Component.objects.with_repo()
-
     if settings.AUTO_UPDATE not in ("full", "remote", True, False):
         return
 
-    for component in non_linked.iterator():
-        perform_update.delay("Component", component.pk, auto=True)
+    for component in Component.objects.with_repo().prefetch():
+        perform_update("Component", -1, auto=True, obj=component)
 
 
 @app.task(trail=False)
@@ -330,13 +327,16 @@ def auto_translate(
     else:
         user = None
     with override(user.profile.language if user else "en"):
-        auto = AutoTranslate(
-            user, Translation.objects.get(pk=translation_id), filter_type, mode
+        translation = Translation.objects.get(pk=translation_id)
+        translation.log_info(
+            "starting automatic translation %s", current_task.request.id
         )
+        auto = AutoTranslate(user, translation, filter_type, mode)
         if auto_source == "mt":
             auto.process_mt(engines, threshold)
         else:
             auto.process_others(component)
+        translation.log_info("completed automatic translation")
 
         if auto.updated == 0:
             return _("Automatic translation completed, no strings were updated.")

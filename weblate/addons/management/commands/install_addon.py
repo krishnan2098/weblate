@@ -39,11 +39,21 @@ class Command(WeblateComponentCommand):
             "--update", action="store_true", help="Update existing addons configuration"
         )
 
+    def validate_form(self, form):
+        if not form.is_valid():
+            for error in form.non_field_errors():
+                self.stderr.write(error)
+            for field in form:
+                for error in field.errors:
+                    self.stderr.write("Error in {}: {}".format(field.name, error))
+            raise CommandError("Invalid addon configuration!")
+
     def handle(self, *args, **options):
         try:
-            addon = ADDONS[options["addon"]]()
+            addon_class = ADDONS[options["addon"]]
         except KeyError:
             raise CommandError("Addon not found: {}".format(options["addon"]))
+        addon = addon_class()
         try:
             configuration = json.loads(options["configuration"])
         except ValueError as error:
@@ -54,20 +64,13 @@ class Command(WeblateComponentCommand):
             user = get_anonymous()
         for component in self.get_components(*args, **options):
             if addon.has_settings:
-                form = addon.get_add_form(component, data=configuration)
-                if not form.is_valid():
-                    for error in form.non_field_errors():
-                        self.stderr.write(error)
-                    for field in form:
-                        for error in field.errors:
-                            self.stderr.write(
-                                "Error in {}: {}".format(field.name, error)
-                            )
-                    raise CommandError("Invalid addon configuration!")
+                form = addon.get_add_form(None, component, data=configuration)
+                self.validate_form(form)
             addons = Addon.objects.filter_component(component).filter(name=addon.name)
-            if addons.exists():
+            if addons:
                 if options["update"]:
-                    addons.update(configuration=configuration)
+                    for addon_component in addons:
+                        addon_component.addon.configure(configuration)
                     self.stdout.write("Successfully updated on {}".format(component))
                 else:
                     self.stderr.write("Already installed on {}".format(component))

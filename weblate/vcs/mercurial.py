@@ -68,12 +68,9 @@ class HgRepository(Repository):
         self.set_config("ui.ssh", SSH_WRAPPER.filename)
 
     @classmethod
-    def _clone(cls, source, target, branch=None):
+    def _clone(cls, source: str, target: str, branch: str):
         """Clone repository."""
-        if branch:
-            cls._popen(["clone", "--branch", branch, source, target])
-        else:
-            cls._popen(["clone", source, target])
+        cls._popen(["clone", "--branch", branch, source, target])
 
     def get_config(self, path):
         """Read entry from configuration."""
@@ -286,7 +283,9 @@ class HgRepository(Repository):
         self.execute(["remove", "--force", "--"] + files)
         self.commit(message, author)
 
-    def configure_remote(self, pull_url, push_url, branch):
+    def configure_remote(
+        self, pull_url: str, push_url: str, branch: str, fast: bool = True
+    ):
         """Configure remote repository."""
         old_pull = self.get_config("paths.default")
         old_push = self.get_config("paths.default-push")

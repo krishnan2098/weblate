@@ -24,7 +24,7 @@ from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 
 from weblate.checks.base import TargetCheck
-from weblate.checks.data import SAME_BLACKLIST
+from weblate.checks.data import IGNORE_WORDS
 from weblate.checks.format import (
     C_PRINTF_MATCH,
     PHP_PRINTF_MATCH,
@@ -61,9 +61,7 @@ PATH_RE = re.compile(r"(^|[ ])(/[a-zA-Z0-9=:?._-]+)+")
 
 TEMPLATE_RE = re.compile(r"{[a-z_-]+}|@[A-Z_]@", re.IGNORECASE)
 
-RST_MATCH = re.compile(
-    r"(?::(ref|config:option|file|guilabel|download):`[^`]+`|``[^`]+``)"
-)
+RST_MATCH = re.compile(r"(:[a-z:]+:`[^`]+`|``[^`]+``)")
 
 SPLIT_RE = re.compile(
     r"(?:\&(?:nbsp|rsaquo|lt|gt|amp|ldquo|rdquo|times|quot);|"
@@ -141,7 +139,7 @@ def test_word(word, extra_ignore):
     """Test whether word should be ignored."""
     return (
         len(word) <= 2
-        or word in SAME_BLACKLIST
+        or word in IGNORE_WORDS
         or word in LANGUAGES
         or word in extra_ignore
     )
